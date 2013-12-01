@@ -1,0 +1,210 @@
+<!doctype html>
+<!-- paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither/ -->
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+   <%= csrf_meta_tag %>
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title><%= title %></title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!-- Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
+
+  <!-- CSS: implied media="all" -->
+  <%= stylesheet_link_tag "application", "jquery-ui", "1140", "1140_ie", "farbtastic", :media => "all" %>
+
+  <!-- More ideas for your <head> here: h5bp.com/docs/#head-Tips -->
+
+  <!-- All JavaScript at the bottom, except for Modernizr and Respond.
+       Modernizr enables HTML5 elements & feature detects; Respond is a polyfill for min/max-width CSS3 Media Queries
+       For optimal performance, use a custom Modernizr build: www.modernizr.com/download/ -->
+  <%= javascript_include_tag "modernizr", "respond" %>
+
+	<!-- Google Analytics -->
+	<script type="text/javascript">
+	   var _gaq = _gaq || [];
+	  _gaq.push(['_setAccount', 'UA-25871242-1']);
+	  _gaq.push(['_setDomainName', 'yammerfall.com']);
+	  _gaq.push(['_trackPageview']);
+	  (function() {
+	    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+	    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+	    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	  })();
+	</script>
+  
+</head>
+
+<body>
+
+  <div id="container" class="container">
+    <header>
+      <%= render 'layouts/header' %>
+    </header>
+    
+    <div id="main" role="main">
+      <%= yield %>
+    </div>
+    
+    <footer>
+      <%= render 'layouts/footer' %>
+			<!--<%= debug(params) %>-->
+    </footer>
+    
+    <%= render 'layouts/jquery_templates' %>
+    <%= render 'layouts/settings_dialog' %>
+  </div> <!--! end of #container -->
+
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+  <%= javascript_include_tag :defaults %>
+  
+  <!-- JavaScript code loaded after JavaScript include -->
+
+  <!-- Production app id -->
+  <script data-app-id="INSERT_APP_ID" src="https://assets.yammer.com/platform/yam.js"></script>
+
+  <script type="text/javascript">
+    var loadDelay = 30000;
+    var showDelay = 3000;
+    var messageLimit = 10;
+    var lastMessageId = 0;
+    var count = 3000;
+  	var accessTokens = {};
+  	var oauth = {};
+    
+    yam.getLoginStatus( function (response) {
+      if (response.authResponse) {     
+        login(response);
+      } else {
+		$('#landing').removeClass('hidden');
+        yam.connect.loginButton('#yammer-login', function (response) {
+          if (response.access_token) {
+            yam.getLoginStatus( function (response) {
+            	if (response.authResponse) {
+            		login(response);
+            	}
+            });
+          }
+        });
+      }   
+    });
+    
+    //Settings dialog code
+    $(document).ready(function(){
+		var network = $('#network'),
+			group = $('#group'),
+			topic = $('#topic'),
+			logoUrl = $('#logoUrl'),
+			color = $('#color'),
+			allFields = $( [] ).add( network ).add( group ).add( topic ).add( logoUrl ).add( color ),
+			tips = $('.validateTips');
+	
+		function updateTips( t ) {
+			tips.text( t ).addClass( "ui-state-highlight" );
+			setTimeout(function() {
+				tips.removeClass( "ui-state-highlight", 1500 );
+			}, 500 );
+		}
+		
+		function checkUrl(url) {
+			if(url.val().length > 0) {
+				if (!isUrl(url.val())) {
+					url.addClass("ui-state-error");
+					updateTips("The logo URL entered is invalid.");
+					return false;
+				}
+			}
+			return true;
+		}
+		
+		function checkBothNotFilled(group, topic) {
+			if (group.val()!=-1 && topic.val().length>0) {
+				group.addClass("ui-state-error");
+				topic.addClass("ui-state-error");
+				updateTips("Please select either a group or a topic, but not both.")
+				return false;
+			} else {
+				return true;
+			}
+		}
+      
+      	$('#settings-dialog').dialog({
+	    		autoOpen: false,
+	    		modal: true,
+	    		width: 400,
+	    		resizable: false,
+	    		buttons: {
+	    			"Save": function() {
+	    				var bValid = true;
+	            		allFields.removeClass( "ui-state-error" );
+	            		bValid = bValid && checkBothNotFilled(group, topic);
+						bValid = bValid && checkUrl(logoUrl);
+	            		if ( bValid ) {
+	            			$.cookie('networkPermalink', network.val());
+	  					  	$.cookie('groupId', group.val());
+							if (group.val() != -1) {
+								$.cookie('filterName', $('#group option:selected').text());
+							} else {
+								$.cookie('groupId', null);
+							}
+							if (logoUrl.val().length > 0) {
+								$.cookie('logoUrl', logoUrl.val());
+							} else {
+								$.cookie('logoUrl', null);
+							}
+							$.cookie('color', color.val());
+							if (group.val()==-1 && (topic.val().length==0||topic.val()=="#")) {
+								$.cookie('filterName', null);
+							}
+							if (topic.val().length>0 && topic.val()!="#") {
+								var topicText = topic.val().replace(/_/g, " ");
+								if (topicText.indexOf("#") == 0) {
+									topicText = topicText.substring(1);
+								}
+							 	getOrCreateTopicId(topicText);
+							} else {
+								$.cookie('topicId', null);
+								$.cookie('topicName', null);
+								$(this).dialog("close");
+		  						retrieveInitialFeed();
+							}
+	  					} 
+	    			},
+					"Reset": function() { 
+						allFields.removeClass( "ui-state-error" );
+						network.val($.cookie('networkPermalink'));
+						oauth.setAuthToken(accessTokens[$.cookie('networkPermalink')]);
+						group.val(-1);
+						logoUrl.val(null);
+						topic.val(null);
+						$.farbtastic('#colorpicker').setColor("#0092bc");
+						updateTips("Select a group feed or topic feed, or apply a custom look.");
+	    			},
+	    			"Cancel": function() { 
+	    				oauth.setAuthToken(accessTokens[$.cookie('networkPermalink')]);
+	    				$(this).dialog("close"); 
+	    			} 
+	    		}
+    	});
+    	
+		$('#colorpicker').farbtastic('#color');
+    	$('#settings-dialog').removeClass('hidden');
+    });
+  </script>
+</body>
+</html>
